@@ -36,10 +36,12 @@ module Diskmon
 
           when /c[0-9]t/
             disk_name = l.split[0]
+            if disk_name =~ /s0/
+              disk_name = disk_name.slice(0,6) # dirty hack for rpool disks(with slice)
+            end
 
             @disks[disk_name] = {}
             @disks[disk_name]["zpool"]           = pool_name
-
             @disks[disk_name]["read_errors"]     = l.split[2] 
             @disks[disk_name]["write_errors"]    = l.split[3]
             @disks[disk_name]["checksum_errors"] = l.split[4]
@@ -55,19 +57,35 @@ module Diskmon
     end
 
     def which_pool(device)
-      @disks[device]["zpool"]
+      if @disks.include? device
+        @disks[device]["zpool"]
+      else 
+        nil  
+      end
     end
 
     def read_errors(device)
-      @disks[device]["read_errors"]
+      if @disks.include? device
+        @disks[device]["read_errors"]
+      else
+        nil
+      end
     end
 
     def write_errors(device)
-      @disks[device]["write_errors"]
+      if @disks.include? device
+        @disks[device]["write_errors"]
+      else
+        nil
+      end
     end
 
     def checksum_errors(device)
-      @disks[device]["checksum_errors"]
+      if @disks.include? device
+        @disks[device]["checksum_errors"]
+      else
+        nil
+      end
     end
 
     # free_space
@@ -75,7 +93,11 @@ module Diskmon
     # last_command
     # health
     def get_pool_param(pool, param)
-      @pools[pool][param]
+      if @pools.include? pool
+        @pools[pool][param]
+      else
+        nil
+      end
     end
 
   end

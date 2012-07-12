@@ -9,6 +9,7 @@ require 'data_mapper'
 require 'dm-validations'
 require 'pp'
 require "diskmon/server/harddiskreport"
+require "diskmon/server/serverapp"
 
 module Diskmon
 
@@ -50,24 +51,7 @@ module Diskmon
 
       Diskmon::HardDiskReport.auto_upgrade!
 
-      post '/report/new' do
-        data = request.body.read
-
-        Kernel.puts "// Report from #{request.env['REMOTE_ADDR']}" if $DEBUG
-
-        @m = Marshal.load(data)
-
-        @m.each do |disk|
-          report = Diskmon::HardDiskReport.create(disk.to_hash)
-          report.checksum = disk.checksum
-
-          report.print if $DEBUG
-
-          report.save
-        end
-
-        "OK"
-      end
+      Diskmon::ServerApp.run!
     end
   end
 end
