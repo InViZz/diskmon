@@ -4,7 +4,7 @@ require "diskmon/client/raidcontroller"
 require "diskmon/client/collector"
 
 require 'sinatra'
-require "thin"
+#require "thin"
 require 'data_mapper'
 require 'dm-validations'
 require 'pp'

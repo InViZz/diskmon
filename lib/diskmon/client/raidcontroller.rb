@@ -66,21 +66,6 @@ module Diskmon
 
             d.dri = "disk://" + Diskmon::Server.get_id + "/" + d.ctl_id + "/" + d.port
 
-            # IO.popen("tw_cli /#{ctl_id}/#{d.port} show smart") do |tw_cli_show_smart_io|
-
-            #   d.smart_status_raw = []
-
-            #   tw_cli_show_smart_io.each_line do |l|
-            #     s = l.split
-            #     d.smart_status_raw.push(s) if l[0,1] =~ /[0-9]/ and not s.empty?
-            #   end
-
-            #   d.smart_status = parse_smart_status(d.smart_status_raw.flatten!)
-              
-            # end # show smart
-         
-            # full stats
-            #
             IO.popen("tw_cli /c#{d.ctl_id}/p#{d.port} show all | grep '^/c#{d.ctl_id}/p#{d.port}'") do |tw_cli_show_all_io|
 
               tw_cli_show_all_io.each_line do |l|
@@ -98,7 +83,7 @@ module Diskmon
 
             end # show all
 
-            d.system_device   = "c#{d.ctl_id}t#{d.unit}d0"
+            d.system_device   = "c#{d.ctl_id}t#{d.port}d0"
             d.short_device    = mapdev.to_short(d.system_device)
             
             yield d
@@ -106,6 +91,33 @@ module Diskmon
         end
 
       when :adaptec
+        mapdev = Diskmon::SolarisMapDev.new
+
+        # disks overview
+        #
+        arcconf_num_drives = `arcconf getconfig #{ctl_id} | grep 'Device #' | wc -l`.chomp.to_i
+
+        0.upto(arcconf_num_drives - 2) do |num|
+          disk = `arcconf getconfig #{ctl_id} | ggrep 'Device ##{num}' -A 17`.split
+
+          d = Diskmon::HardDisk.new
+
+          d.ctl_id       = ctl_id
+          d.port         = disk[23][2,1]
+          d.status       = disk[9]
+          d.size         = disk[50]
+          d.type         = disk[10]
+          d.vendor_model = disk[40]
+          d.serial       = disk[47]
+
+          d.dri = "disk://" + Diskmon::Server.get_id + "/" + d.ctl_id + "/" + d.port
+
+          # TODO smart status
+          d.system_device = `iostat -En | ggrep #{d.serial} -B1`.split[0]
+          d.short_device    = mapdev.to_short(d.system_device)
+          
+          yield d
+        end
       end
     end
 
