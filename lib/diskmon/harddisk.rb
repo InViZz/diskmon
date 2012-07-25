@@ -12,7 +12,7 @@ module Diskmon
     attr_accessor :port
     attr_accessor :status
     attr_accessor :unit
-    attr_accessor :type             # sata or sas
+    attr_accessor :type             # sata or sas or jbod
     attr_accessor :vendor_model
     attr_accessor :smart_status_raw # array of hex numbers
     attr_accessor :smart_status

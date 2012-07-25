@@ -1,16 +1,6 @@
 #!/usr/bin/env ruby
 require "rubygems"
 require "diskmon"
-require "optparse"
 
-OptionParser.new do |opt|
-  opt.separator ""
-  opt.separator "Options:"
-  opt.separator "-------------"
-  opt.on('-a', '--agent', 'Agent mode') { Diskmon::Runner.agent }
-  opt.on('-s', '--server', 'Server mode') { Diskmon::Runner.server }
-  opt.separator ""
-  opt.on_tail('-h', '--help')           { puts opt; exit }
+Diskmon::Runner.agent
 
-  opt.parse!
-  end

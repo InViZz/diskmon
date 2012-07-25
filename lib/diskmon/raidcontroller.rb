@@ -1,6 +1,6 @@
-require "diskmon/client/solarismapdev"
-require "diskmon/client/harddisk"
-require "diskmon/client/zpoolstree"
+require "diskmon/solarismapdev"
+require "diskmon/harddisk"
+require "diskmon/zpoolstree"
 
 module Diskmon
 
@@ -12,7 +12,7 @@ module Diskmon
     end
 
     def get_vendor
-      v = `scanpci | grep -i raid`
+      v = `scanpci | egrep -i '(Adaptec|3ware)'`
 
       case v.downcase
       when /3ware/   then return :threeware
@@ -98,27 +98,47 @@ module Diskmon
         arcconf_num_drives = `arcconf getconfig #{ctl_id} | grep 'Device #' | wc -l`.chomp.to_i
 
         0.upto(arcconf_num_drives - 2) do |num|
-          disk = `arcconf getconfig #{ctl_id} | ggrep 'Device ##{num}' -A 17`.split
+          disk = get_hash_of_disk(ctl_id, num) 
 
           d = Diskmon::HardDisk.new
 
           d.ctl_id       = ctl_id
-          d.port         = disk[23][2,1]
-          d.status       = disk[9]
-          d.size         = disk[50]
-          d.type         = disk[10]
-          d.vendor_model = disk[40]
-          d.serial       = disk[47]
+          d.port         = disk["ReportedLocation"].split("Slot")[1]
+          d.status       = disk["State"]
+          d.size         = disk["Size"]
+          d.type         = disk["TransferSpeed"]
+          d.vendor_model = disk["Model"]
+          d.serial       = disk["Serialnumber"]
 
           d.dri = "disk://" + Diskmon::Server.get_id + "/" + d.ctl_id + "/" + d.port
 
           # TODO smart status
-          d.system_device = `iostat -En | ggrep #{d.serial} -B1`.split[0]
-          d.short_device    = mapdev.to_short(d.system_device)
+          if `iostat -En | ggrep #{d.serial} -B1`.split[0]
+            d.system_device = `iostat -En | ggrep #{d.serial} -B1`.split[0]
+          else 
+            d.system_device = "c0t#{d.port}d0"
+          end
+
+          d.short_device = mapdev.to_short(d.system_device)
           
           yield d
         end
       end
+    end
+
+    def get_hash_of_disk(ctl_id, num)
+      disk_info = []
+      d = []
+      get_config = `arcconf getconfig #{ctl_id} | ggrep -m 1 'Device ##{num}' -A 22`
+      get_config.split(/\n/).each do |e|
+        disk_info << e.split(' :')
+      end
+      disk_info.slice!(0,2)
+      disk_info.flatten!
+      disk_info.each do |e|
+        d << e.split(" ").join
+      end
+      disk_hash = Hash[*d] 
     end
 
     def get_all_stats
